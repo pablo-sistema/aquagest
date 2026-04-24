@@ -95,24 +95,43 @@ function PaqueteForm({ initial, onSave, onClose }) {
 }
 
 // ── MÓDULO PRINCIPAL ─────────────────────────────────────────────
-export default function Paquetes({ packages, setPackages }) {
+export default function Paquetes({ packages, setPackages, dbPaquetes }) {
   const [modal, setModal] = useState(null);
 
-  const guardar = (f) => {
-    if (modal === "new") {
-      setPackages(ps => [...ps, { ...f, id: uid() }]);
-    } else {
-      setPackages(ps => ps.map(p => p.id === modal.id ? { ...modal, ...f } : p));
+  const guardar = async (f) => {
+    try {
+      if (modal === "new") {
+        const nuevo = await dbPaquetes.create(f);
+        setPackages(ps => [...ps, nuevo]);
+      } else {
+        const actualizado = await dbPaquetes.update(modal.id, f);
+        setPackages(ps => ps.map(p => p.id === modal.id ? actualizado : p));
+      }
+      setModal(null);
+    } catch (e) {
+      console.error("Error guardando paquete:", e);
+      alert("Error al guardar. Intenta de nuevo.");
     }
-    setModal(null);
   };
 
-  const toggleActivo = (pkg) =>
-    setPackages(ps => ps.map(p => p.id === pkg.id ? { ...p, active: !p.active } : p));
+  const toggleActivo = async (pkg) => {
+    try {
+      const actualizado = await dbPaquetes.update(pkg.id, { ...pkg, active: !pkg.active });
+      setPackages(ps => ps.map(p => p.id === pkg.id ? actualizado : p));
+    } catch (e) {
+      alert("Error al actualizar. Intenta de nuevo.");
+    }
+  };
 
-  const eliminar = (pkg) => {
-    if (confirm(`¿Eliminar el paquete "${pkg.name}"?`))
-      setPackages(ps => ps.filter(p => p.id !== pkg.id));
+  const eliminar = async (pkg) => {
+    if (confirm(`¿Eliminar el paquete "${pkg.name}"?`)) {
+      try {
+        await dbPaquetes.delete(pkg.id);
+        setPackages(ps => ps.filter(p => p.id !== pkg.id));
+      } catch (e) {
+        alert("Error al eliminar. Intenta de nuevo.");
+      }
+    }
   };
 
   const activos   = packages.filter(p =>  p.active);
