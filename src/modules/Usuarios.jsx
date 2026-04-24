@@ -185,21 +185,24 @@ function CambiarPasswordModal({ user, onSave, onClose }) {
 }
 
 // ── MÓDULO PRINCIPAL ─────────────────────────────────────────────
-export default function Usuarios({ usuarios, setUsuarios, currentUser }) {
+export default function Usuarios({ usuarios, setUsuarios, currentUser, dbUsuarios }) {
   const [modal,    setModal]    = useState(null);
   const [cambPass, setCambPass] = useState(null);
 
-  const guardar = (f) => {
-    if (modal === "new") {
-      setUsuarios(us => [...us, { ...f, id: uid(), avatar: f.role === "admin" ? "👔" : "💳" }]);
-    } else {
-      setUsuarios(us => us.map(u =>
-        u.id === modal.id
-          ? { ...modal, ...f, avatar: f.role === "admin" ? "👔" : "💳" }
-          : u
-      ));
+  const guardar = async (f) => {
+    try {
+      if (modal === "new") {
+        const nuevo = await dbUsuarios.create(f);
+        setUsuarios(us => [...us, nuevo]);
+      } else {
+        const actualizado = await dbUsuarios.update(modal.id, f);
+        setUsuarios(us => us.map(u => u.id === modal.id ? actualizado : u));
+      }
+      setModal(null);
+    } catch (e) {
+      console.error("Error guardando usuario:", e);
+      alert("Error al guardar. Intenta de nuevo.");
     }
-    setModal(null);
   };
 
   const guardarPassword = (userId, nuevaPass) => {
@@ -208,15 +211,26 @@ export default function Usuarios({ usuarios, setUsuarios, currentUser }) {
     alert("✅ Contraseña actualizada correctamente.");
   };
 
-  const toggleActivo = (u) => {
+  const toggleActivo = async (u) => {
     if (u.id === currentUser.id) return alert("No puedes desactivarte a ti mismo");
-    setUsuarios(us => us.map(x => x.id === u.id ? { ...x, activo: !x.activo } : x));
+    try {
+      const actualizado = await dbUsuarios.update(u.id, { ...u, activo: !u.activo });
+      setUsuarios(us => us.map(x => x.id === u.id ? actualizado : x));
+    } catch (e) {
+      alert("Error al actualizar. Intenta de nuevo.");
+    }
   };
 
-  const eliminar = (u) => {
+  const eliminar = async (u) => {
     if (u.id === currentUser.id) return alert("No puedes eliminar tu propio usuario");
-    if (confirm(`¿Eliminar al usuario "${u.name}"?`))
-      setUsuarios(us => us.filter(x => x.id !== u.id));
+    if (confirm(`¿Eliminar al usuario "${u.name}"?`)) {
+      try {
+        await dbUsuarios.delete(u.id);
+        setUsuarios(us => us.filter(x => x.id !== u.id));
+      } catch (e) {
+        alert("Error al eliminar. Intenta de nuevo.");
+      }
+    }
   };
 
   const admins    = usuarios.filter(u => u.role === "admin");
