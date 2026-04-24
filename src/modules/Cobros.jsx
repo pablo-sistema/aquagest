@@ -366,6 +366,7 @@ function CobroAutomatico({ clients, packages, bills, onGenerate, onClose }) {
 
 // ── MÓDULO PRINCIPAL ─────────────────────────────────────────────
 export default function Cobros({ bills, setBills, clients, packages, role, currentUser, config = {} }) {
+
   const [modal,        setModal]        = useState(null);
   const [printModal,   setPrintModal]   = useState(null);
   const [search,       setSearch]       = useState("");
@@ -396,15 +397,23 @@ export default function Cobros({ bills, setBills, clients, packages, role, curre
       || c?.code.toLowerCase().includes(q);
   });
 
-  const marcarPagado = (bill) => {
-    setBills(bs => bs.map(b =>
-      b.id === bill.id ? { ...b, status: "pagado", paidDate: today() } : b
-    ));
+  const marcarPagado = async (bill) => {
+    try {
+      const actualizado = await dbRecibos.update(bill.id, { ...bill, status: "pagado", paidDate: today() });
+      setBills(bs => bs.map(b => b.id === bill.id ? actualizado : b));
+    } catch (e) {
+      alert("Error al marcar como pagado. Intenta de nuevo.");
+    }
   };
 
-  const eliminar = (bill) => {
+  const eliminar = async (bill) => {
     if (confirm(`¿Eliminar el recibo ${bill.code}?`)) {
-      setBills(bs => bs.filter(b => b.id !== bill.id));
+      try {
+        await dbRecibos.delete(bill.id);
+        setBills(bs => bs.filter(b => b.id !== bill.id));
+      } catch (e) {
+        alert("Error al eliminar. Intenta de nuevo.");
+      }
     }
   };
 
@@ -600,7 +609,15 @@ export default function Cobros({ bills, setBills, clients, packages, role, curre
           <CobroForm
             clients={clients}
             packages={packages}
-            onSave={b => { setBills(bs => [...bs, { ...b, cobradorId: currentUser?.id }]); setModal(null); }}
+            onSave={async b => {
+              try {
+                const nuevo = await dbRecibos.create(b);
+                setBills(bs => [...bs, nuevo]);
+                setModal(null);
+              } catch (e) {
+                alert("Error al guardar recibo. Intenta de nuevo.");
+              }
+            }}
             onClose={() => setModal(null)}
           />
         </Modal>
@@ -613,7 +630,14 @@ export default function Cobros({ bills, setBills, clients, packages, role, curre
             clients={clients}
             packages={packages}
             bills={bills}
-            onGenerate={nuevos => setBills(bs => [...bs, ...nuevos])}
+            onGenerate={async nuevos => {
+              try {
+                const creados = await dbRecibos.createMany(nuevos);
+                setBills(bs => [...bs, ...creados]);
+              } catch (e) {
+                alert("Error al generar recibos. Intenta de nuevo.");
+              }
+            }}
             onClose={() => setModal(null)}
           />
         </Modal>
