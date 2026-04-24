@@ -102,7 +102,7 @@ function BarraMini({ valor, maximo, color }) {
 }
 
 // ── MÓDULO PRINCIPAL ─────────────────────────────────────────────
-export default function Finanzas({ bills, gastos, setGastos, role, clients = [] }) {
+export default function Finanzas({ bills, gastos, setGastos, role, dbGastos }) {
   const [modal,        setModal]        = useState(null);
   const [tabActual,    setTabActual]    = useState("resumen");
   const [periodoFiltro,setPeriodoFiltro]= useState(new Date().toISOString().slice(0, 7));
@@ -157,18 +157,31 @@ export default function Finanzas({ bills, gastos, setGastos, role, clients = [] 
     ...gastos.map(g => g.fecha.slice(0, 7)),
   ])].sort().reverse();
 
-  const guardar = (f) => {
-    if (modal === "new") {
-      setGastos(gs => [...gs, { ...f, id: uid() }]);
-    } else {
-      setGastos(gs => gs.map(g => g.id === modal.id ? { ...modal, ...f } : g));
+  const guardar = async (f) => {
+    try {
+      if (modal === "new") {
+        const nuevo = await dbGastos.create(f);
+        setGastos(gs => [...gs, nuevo]);
+      } else {
+        const actualizado = await dbGastos.update(modal.id, f);
+        setGastos(gs => gs.map(g => g.id === modal.id ? actualizado : g));
+      }
+      setModal(null);
+    } catch (e) {
+      console.error("Error guardando gasto:", e);
+      alert("Error al guardar. Intenta de nuevo.");
     }
-    setModal(null);
   };
 
-  const eliminar = (g) => {
-    if (confirm(`¿Eliminar el gasto "${g.concepto}"?`))
-      setGastos(gs => gs.filter(x => x.id !== g.id));
+  const eliminar = async (g) => {
+    if (confirm(`¿Eliminar el gasto "${g.concepto}"?`)) {
+      try {
+        await dbGastos.delete(g.id);
+        setGastos(gs => gs.filter(x => x.id !== g.id));
+      } catch (e) {
+        alert("Error al eliminar. Intenta de nuevo.");
+      }
+    }
   };
 
   // Tabs
