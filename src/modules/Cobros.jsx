@@ -365,7 +365,7 @@ function CobroAutomatico({ clients, packages, bills, onGenerate, onClose }) {
 }
 
 // ── MÓDULO PRINCIPAL ─────────────────────────────────────────────
-export default function Cobros({ bills, setBills, clients, packages, role, currentUser, config = {} }) {
+export default function Cobros({ bills, setBills, clients, packages, role, currentUser, config = {}, dbRecibos }) {
 
   const [modal,        setModal]        = useState(null);
   const [printModal,   setPrintModal]   = useState(null);
@@ -373,14 +373,17 @@ export default function Cobros({ bills, setBills, clients, packages, role, curre
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPeriod, setFilterPeriod] = useState("all");
 
-  // Marcar vencidos automáticamente
+  // Marcar vencidos automáticamente (local + Supabase)
   useEffect(() => {
     const hoy = today();
+    const vencidos = bills.filter(b => b.status === "pendiente" && b.dueDate && b.dueDate < hoy);
+    if (vencidos.length === 0) return;
     setBills(bs => bs.map(b =>
       b.status === "pendiente" && b.dueDate && b.dueDate < hoy
         ? { ...b, status: "vencido" }
         : b
     ));
+    vencidos.forEach(b => dbRecibos?.update(b.id, { ...b, status: "vencido" }).catch(() => {}));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -611,7 +614,7 @@ export default function Cobros({ bills, setBills, clients, packages, role, curre
             packages={packages}
             onSave={async b => {
               try {
-                const nuevo = await dbRecibos.create(b);
+                const nuevo = await dbRecibos.create({ ...b, cobradorId: currentUser?.id });
                 setBills(bs => [...bs, nuevo]);
                 setModal(null);
               } catch (e) {

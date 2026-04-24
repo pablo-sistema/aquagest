@@ -205,10 +205,16 @@ export default function Usuarios({ usuarios, setUsuarios, currentUser, dbUsuario
     }
   };
 
-  const guardarPassword = (userId, nuevaPass) => {
-    setUsuarios(us => us.map(u => u.id === userId ? { ...u, password: nuevaPass } : u));
-    setCambPass(null);
-    alert("✅ Contraseña actualizada correctamente.");
+  const guardarPassword = async (userId, nuevaPass) => {
+    try {
+      const usuario = usuarios.find(u => u.id === userId);
+      await dbUsuarios.update(userId, { ...usuario, password: nuevaPass });
+      setUsuarios(us => us.map(u => u.id === userId ? { ...u, password: nuevaPass } : u));
+      setCambPass(null);
+      alert("✅ Contraseña actualizada correctamente.");
+    } catch {
+      alert("Error al actualizar la contraseña. Intenta de nuevo.");
+    }
   };
 
   const toggleActivo = async (u) => {

@@ -274,7 +274,7 @@ function RutasModal({ clients, packages, bills, onClose }) {
 }
 
 // ── MÓDULO PRINCIPAL ─────────────────────────────────────────────
-export default function Clientes({ clients, setClients, packages, role, dbClientes }) {
+export default function Clientes({ clients, setClients, packages, bills = [], role, dbClientes }) {
   const [search,       setSearch]       = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [modal,        setModal]        = useState(null);
