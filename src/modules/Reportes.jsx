@@ -169,7 +169,7 @@ function ReporteForm({ initial, clients, onSave, onClose }) {
 }
 
 // ── MÓDULO PRINCIPAL ─────────────────────────────────────────────
-export default function Reportes({ reports, setReports, clients }) {
+export default function Reportes({ reports, setReports, clients, dbReportes }) {
   const [modal,        setModal]        = useState(null);
   const [search,       setSearch]       = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -185,22 +185,39 @@ export default function Reportes({ reports, setReports, clients }) {
       || r.technician.toLowerCase().includes(q);
   });
 
-  const guardar = (f) => {
-    if (modal === "new") {
-      setReports(rs => [...rs, { ...f, id: uid() }]);
-    } else {
-      setReports(rs => rs.map(r => r.id === modal.id ? { ...modal, ...f } : r));
+  const guardar = async (f) => {
+    try {
+      if (modal === "new") {
+        const nuevo = await dbReportes.create(f);
+        setReports(rs => [...rs, nuevo]);
+      } else {
+        const actualizado = await dbReportes.update(modal.id, f);
+        setReports(rs => rs.map(r => r.id === modal.id ? actualizado : r));
+      }
+      setModal(null);
+    } catch (e) {
+      console.error("Error guardando reporte:", e);
+      alert("Error al guardar. Intenta de nuevo.");
     }
-    setModal(null);
   };
 
-  const cambiarEstado = (r, status) => {
-    setReports(rs => rs.map(x => x.id === r.id ? { ...x, status } : x));
+  const cambiarEstado = async (r, status) => {
+    try {
+      const actualizado = await dbReportes.update(r.id, { ...r, status });
+      setReports(rs => rs.map(x => x.id === r.id ? actualizado : x));
+    } catch (e) {
+      alert("Error al actualizar estado. Intenta de nuevo.");
+    }
   };
 
-  const eliminar = (r) => {
+  const eliminar = async (r) => {
     if (confirm(`¿Eliminar el reporte "${r.title}"?`)) {
-      setReports(rs => rs.filter(x => x.id !== r.id));
+      try {
+        await dbReportes.delete(r.id);
+        setReports(rs => rs.filter(x => x.id !== r.id));
+      } catch (e) {
+        alert("Error al eliminar. Intenta de nuevo.");
+      }
     }
   };
 
