@@ -274,7 +274,7 @@ function RutasModal({ clients, packages, bills, onClose }) {
 }
 
 // ── MÓDULO PRINCIPAL ─────────────────────────────────────────────
-export default function Clientes({ clients, setClients, packages, bills = [], role }) {
+export default function Clientes({ clients, setClients, packages, role, dbClientes }) {
   const [search,       setSearch]       = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [modal,        setModal]        = useState(null);
@@ -288,18 +288,31 @@ export default function Clientes({ clients, setClients, packages, bills = [], ro
       || c.dni.includes(q) || c.address.toLowerCase().includes(q);
   });
 
-  const guardar = (f) => {
-    if (modal === "new") {
-      setClients(cs => [...cs, { ...f, id: uid() }]);
-    } else {
-      setClients(cs => cs.map(c => c.id === modal.id ? { ...modal, ...f } : c));
+  const guardar = async (f) => {
+    try {
+      if (modal === "new") {
+        const nuevo = await dbClientes.create(f);
+        setClients(cs => [...cs, nuevo]);
+      } else {
+        const actualizado = await dbClientes.update(modal.id, f);
+        setClients(cs => cs.map(c => c.id === modal.id ? actualizado : c));
+      }
+      setModal(null);
+    } catch (e) {
+      console.error("Error guardando cliente:", e);
+      alert("Error al guardar. Intenta de nuevo.");
     }
-    setModal(null);
   };
 
-  const eliminar = (c) => {
-    if (confirm(`¿Eliminar a ${c.name}? Esta acción no se puede deshacer.`))
-      setClients(cs => cs.filter(x => x.id !== c.id));
+  const eliminar = async (c) => {
+    if (confirm(`¿Eliminar a ${c.name}? Esta acción no se puede deshacer.`)) {
+      try {
+        await dbClientes.delete(c.id);
+        setClients(cs => cs.filter(x => x.id !== c.id));
+      } catch (e) {
+        alert("Error al eliminar. Intenta de nuevo.");
+      }
+    }
   };
 
   const abrirWhatsApp = (c) => {
