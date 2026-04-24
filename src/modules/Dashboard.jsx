@@ -426,7 +426,7 @@ function NuevoClienteForm({ packages, onSave, onClose }) {
 }
 
 // ── DASHBOARD PRINCIPAL ──────────────────────────────────────────
-export default function Dashboard({ clients, bills, reports, packages, setClients }) {
+export default function Dashboard({ clients, bills, reports, packages, setClients, dbClientes }) {
   const [detalleCliente, setDetalleCliente] = useState(null);
   const [nuevoModal,     setNuevoModal]     = useState(false);
 
@@ -610,7 +610,15 @@ export default function Dashboard({ clients, bills, reports, packages, setClient
         <Modal title="➕ Nuevo Cliente" onClose={()=>setNuevoModal(false)} width={680}>
           <NuevoClienteForm
             packages={packages}
-            onSave={c=>{setClients(cs=>[...cs,c]);setNuevoModal(false);}}
+            onSave={async c=>{
+              try {
+                const nuevo = await dbClientes.create(c);
+                setClients(cs=>[...cs,nuevo]);
+                setNuevoModal(false);
+              } catch(e) {
+                alert("Error al guardar cliente. Intenta de nuevo.");
+              }
+            }}
             onClose={()=>setNuevoModal(false)}
           />
         </Modal>
